@@ -1,0 +1,451 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -208,
+        -192
+      ],
+      "id": "8b127c0e-2417-4344-abcb-d363da4558f9",
+      "name": "When chat message received",
+      "webhookId": "9ef4703e-9f3e-4cf4-bc6d-9883f2791e0f"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        80,
+        32
+      ],
+      "id": "665819e8-202e-4992-98e7-dbd08476e2b9",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "EW2IJxwPdfA7sAk5",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        }
+      },
+      "id": "33b59fff-4cab-4f37-bcef-cc89e09525d3",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        -1312,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/hkazi100/data-files/main/indian_sales_data..xlsx",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "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"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f52022da-d55e-4735-b1bb-2675798c9c41",
+      "name": "Fetch Sales File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -1120,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/hkazi100/data-files/main/indian_sales_data..xlsx",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -944,
+        96
+      ],
+      "id": "11168299-a0a1-47b0-98c9-635e66f4fcdf",
+      "name": "Download Sales File"
+    },
+    {
+      "parameters": {
+        "fileFormat": "xlsx",
+        "options": {
+          "headerRow": true
+        }
+      },
+      "id": "4319078a-325d-41f3-a703-53736c29f220",
+      "name": "Parse Excel",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge all rows from Smart Parser into a single array for LLM\nreturn [\n  {\n    json: {\n      allData: items.map(item => item.json)\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        112
+      ],
+      "id": "8ee8fb3a-cdfa-4e20-bbeb-89b796e0f749",
+      "name": "Data Formatter"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional sales analyst. Analyze the following sales orders and provide an **executive-level summary** that is:\n\n- Concise, clear, and professional\n- Starts with total revenue and average order value\n- Lists top 3 products by revenue and category insights\n- Highlights sales trends or seasonality\n- Includes city-wise and category-wise highlights\n- Written in complete sentences suitable for a business report\n\nSales Data (JSON format):\n{{JSON.stringify($json.allData)}}\n",
+        "hasOutputParser": true,
+        "batching": {
+          "batchSize": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -16,
+        -160
+      ],
+      "id": "6749dabb-1f87-40c7-ba20-335a02988011",
+      "name": "Generate Summary"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d7898e15-bc53-4542-94fb-698c82738c38",
+              "name": "summary",
+              "value": "=summaryText = {{$json.text}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        368,
+        -128
+      ],
+      "id": "510f3419-e0f2-4e47-8db6-0dbf1b217ade",
+      "name": "Store Summary"
+    },
+    {
+      "parameters": {
+        "fromEmail": "hkazi974@gmail.com",
+        "toEmail": "hkazi974@gmail.com",
+        "subject": "Daily Executive Sales Summary",
+        "html": "={{$json.summary}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        752,
+        -112
+      ],
+      "id": "d3f90943-6017-4296-99c6-7aa548f7424e",
+      "name": "Email Summary",
+      "webhookId": "9f78332c-4ff3-451f-98f2-3bbad8cc5496",
+      "credentials": {
+        "smtp": {
+          "id": "3EWzucmixvehdCmd",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# 📥 File Fetching & Download\n\nNodes: Fetch Sales File (Auto File Fetcher) + Download Sales File (File Downloader)\n\nNotes:\n\nFetches the latest sales Excel/CSV from GitHub.\n\nSaves the file for processing and ensures integrity (type/size).\n\nHandles binary data storage for downstream nodes.\n\nSupports future extensions like multiple file sources.",
+        "height": 624,
+        "width": 400,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1152,
+        -320
+      ],
+      "typeVersion": 1,
+      "id": "03b5eafd-5e61-48ce-b0c0-23124ba53419",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        -144
+      ],
+      "id": "03956c94-c057-4e20-8a14-7eb84847d285",
+      "name": "return function"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n# 📊 Parsing & Transformation\n\nNodes: Parse Excel/CSV (Smart Parser) + Data Formatter (Code in JavaScript)\n\nNotes:\n\nReads and structures raw Excel/CSV data into JSON.\n\nCleans unnecessary columns and validates data types.\n\nCalculates derived metrics (daily revenue, top products, city-wise sales).\n\nPrepares AI-friendly input for summary generation.",
+        "height": 576,
+        "width": 432,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -720,
+        80
+      ],
+      "typeVersion": 1,
+      "id": "d2c6176e-99f8-4710-a324-3fd3214b8e57",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Node: Schedule Trigger\n\nPurpose: The single purpose of this node is automation. It initiates the entire workflow on a predefined schedule (e.g., daily, weekly, hourly), ensuring the process is fully automated without any manual star.",
+        "height": 304,
+        "width": 352,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1536,
+        -64
+      ],
+      "typeVersion": 1,
+      "id": "ab3a8c43-f5e9-4369-85b8-30c405e46985",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "# 🤖 AI Summary Generation\n\nNodes: Generate Summary (Basic LLM Chain)\n\nNotes:\n\nUses AI (Groq Chat/OpenAI) to generate a natural language summary.\n\nHighlights revenue trends, top products, and city/category insights.\n\nProduces actionable insights for stakeholders.",
+        "height": 640,
+        "width": 544,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -272,
+        -480
+      ],
+      "typeVersion": 1,
+      "id": "7e6e0615-cfa6-491f-a2d4-7adc8cc6530f",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n# 📤 Output & Delivery\n\nNodes: Store Summary (Set Summary) + Email Summary (Send Sales Summary Email)\n\nNotes:\n\nStore Summary node runs a JavaScript snippet with return function to store the AI-generated summary for reuse.\n\nExample behavior: returns the summary so downstream nodes can access it without re-processing.\n\nEmail Summary automatically sends the formatted report to stakeholders.\n\nCan be extended to dashboards, Slack, or other channels.\n\nEnsures a complete end-to-end reporting process.",
+        "height": 656,
+        "width": 608,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        288,
+        -160
+      ],
+      "typeVersion": 1,
+      "id": "b6c7b99a-d30d-466d-a74e-fa6bce4495ac",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "# Summary:\n\nThis workflow automates the full cycle:\n\nTrigger → starts the workflow automatically.\n\nFetch & Download → gets the latest data safely.\n\nParse & Transform → cleans and prepares data.\n\nAI Summary → generates actionable insights.\n\nOutput & Delivery → stores and shares the summary automatically.\n\nThe return function in Store Summary ensures downstream nodes can reuse the AI output efficiently, making the workflow fully modular and reliable.",
+        "height": 432,
+        "width": 448,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -736,
+        -368
+      ],
+      "typeVersion": 1,
+      "id": "24b47115-a66c-4575-83b1-b7bc9bda971a",
+      "name": "Sticky Note5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Summary",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Generate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Sales File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Sales File": {
+      "main": [
+        [
+          {
+            "node": "Download Sales File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Sales File": {
+      "main": [
+        [
+          {
+            "node": "Parse Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Excel": {
+      "main": [
+        [
+          {
+            "node": "Data Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Formatter": {
+      "main": [
+        [
+          {
+            "node": "Generate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Summary": {
+      "main": [
+        [
+          {
+            "node": "Store Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Summary": {
+      "main": [
+        [
+          {
+            "node": "return function",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "return function": {
+      "main": [
+        [
+          {
+            "node": "Email Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "90f3756d-6c02-44d3-82e7-a63c8903bdf1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f441e4bb673a1e10e15a6b6bb3481b6b848587f8e506678c9913d250122ff207"
+  },
+  "id": "GuFUJA4aGIdMwrfI",
+  "tags": [
+    {
+      "createdAt": "2025-09-14T17:30:38.272Z",
+      "updatedAt": "2025-09-14T17:30:38.272Z",
+      "id": "MTgFycGkEoTFDhCg",
+      "name": "automation"
+    },
+    {
+      "createdAt": "2025-09-14T17:30:38.253Z",
+      "updatedAt": "2025-09-14T17:30:38.253Z",
+      "id": "TSL0RfYxvP1gk9bV",
+      "name": "data-analysis"
+    },
+    {
+      "createdAt": "2025-09-14T17:36:19.932Z",
+      "updatedAt": "2025-09-14T17:36:19.932Z",
+      "id": "nIPYnDF7c5Mzkw0r",
+      "name": "free-apis"
+    },
+    {
+      "createdAt": "2025-09-14T17:36:19.926Z",
+      "updatedAt": "2025-09-14T17:36:19.926Z",
+      "id": "zwpKAgl7m1dIqRzK",
+      "name": "automated"
+    }
+  ]
+}
